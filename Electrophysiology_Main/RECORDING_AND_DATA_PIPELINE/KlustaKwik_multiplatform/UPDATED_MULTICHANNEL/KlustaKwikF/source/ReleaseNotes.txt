@@ -1,0 +1,16 @@
+KlustaKwik Release Notes
+
+Version 1.7 24 Jun 04
+
+Fixed line endings in release archive. Modified building.
+
+Version 1.6 15 Nov 03
+
+Added model saving and penalty mix between AIC and BIC. Internally began factoring of clustering engine from executable.
+
+Version 1.5 21 Mar 03
+
+First release at sourceforge. Included cluster splitting.
+
+
+Last updated: 24 Jun 04 Peter N. Steinmetz

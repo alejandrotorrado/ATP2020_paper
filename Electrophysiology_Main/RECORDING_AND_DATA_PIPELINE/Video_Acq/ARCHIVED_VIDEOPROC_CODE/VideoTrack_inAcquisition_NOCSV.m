@@ -1,0 +1,171 @@
+% movement tracking main code
+
+clear all, close all, clc
+recname = input('Recording name (e.g. KH67_68) ?  ','s');
+anim1 = input('Animal 1 name (e.g. KH67) ?  ','s');
+anim2 = input('Animal 2 name (e.g. KH68) ?  ','s');
+acqdir = fullfile('/Users/keithhengen/Desktop/animal_video_frames',recname);
+
+if ~exist(acqdir,'dir')
+    error('VIDEOTRACK : could not find directory %s. Make sure recording name (%s) is correct.\n',...
+        acqdir,recname);
+end
+
+savedir = fullfile(acqdir,'STITCH_VID');
+outputdir = fullfile(acqdir,'TRACKING');
+
+if ~exist(savedir,'dir')
+    mkdir(savedir);
+end
+
+count = 0;
+n_stitch = 2; % number of video files to stitch together into one larger avi file
+
+% point to RPi to check whether recording has stopped
+available_avi = 1;
+processed_avi = 0;
+
+% pause times
+pause1 = .1;
+pause2 = .1;
+
+
+while processed_avi < available_avi % instead of "true", need  to check if recording is over
+    start_avifiles = dir([acqdir filesep '*.avi']);
+    available_avi = size(start_avifiles,1);
+    max_avi = 0;
+    
+    while max_avi <= (count+1)*n_stitch
+        % make list of AVI and CSV files
+        avifiles = dir([acqdir filesep '*.avi']);
+        
+        n_avi = size(avifiles,1);
+        
+        % index AVI files
+        avicharlist = char(avifiles.name);
+        avilist = cellstr(avicharlist);
+        ext = cell2mat(regexp(avilist,'.avi'));
+        underscore = cell2mat(regexp(avilist,[recname '_'],'end'));
+        for cc = 1:size(avicharlist,1)
+            temp = cellstr(avicharlist(cc,underscore(cc,1)+1:ext(cc,1)-1));
+            avi_index(cc,1) = cc;
+            avi_index(cc,2) = str2double(temp{1});
+        end
+        
+        avi_index = sortrows(avi_index,2);
+        
+        max_avi = max(avi_index(:,1));
+        
+        fprintf('Waiting to have the next %u completed avi files. So far have %u files in total.\n',...
+            n_stitch,max_avi);
+        pause(pause1);
+    end
+    
+    
+    fprintf('\n  Found files!\nProcessing %u avi files (up to number %u).\n',n_stitch,(count+1)*n_stitch);
+    new_avi_name = fullfile(savedir,[recname '_STITCH_' num2str(count) '.avi']);
+    new_avi = VideoWriter(new_avi_name);
+    open(new_avi)
+    for ff = 1:n_stitch
+        fprintf('Processing file %u out of %u.\n',count*n_stitch+ff,max_avi);
+        temp_row = find(avi_index(:,2)== min(avi_index(:,2))-1 + count*n_stitch + ff);
+        temp_idx = avi_index(temp_row,1);
+        temp_avi_name = fullfile(acqdir,avifiles(temp_idx).name);
+        temp_avi = VideoReader(temp_avi_name);
+        
+        while hasFrame(temp_avi)
+            frame = readFrame(temp_avi);
+            %             disp(size(frame));
+            writeVideo(new_avi,frame);
+            clear frame
+        end
+        
+       
+    end
+    close(new_avi);
+    
+    if count == 0 % if first file, get ROIs
+        read_new_avi = VideoReader(new_avi_name);
+        firstframe = readFrame(read_new_avi);
+        [ROI_1, ROI_2, corners_1, corners_2] = selectMasks(firstframe);
+    end
+    
+    % now do the tracking
+    % this function call performs movement tracking on the current chunk of
+    % video (obtained by the stitching process above) and saves data for
+    % that chunk to the TRACKING folder in the video data folder for this
+    % recording. The tracking is done in parallel for both animals.
+    
+    % in this version the csv filename is empty
+    new_csv_name = [];
+    movementTracking_byChunk_fxn(new_avi_name,count,outputdir,...
+        anim1,anim2,new_csv_name,ROI_1,ROI_2,corners_1,corners_2);
+    
+    % Check the number of new files that have been added to the folder
+    % while processing was happening and compare to the current number of
+    % files that have been processed.
+    processed_avi = (count+1)*n_stitch;
+    new_avifiles = dir([acqdir filesep '*.avi']);
+    new_available_avi = size(avifiles,1);
+    pause(pause2);
+    
+    % If no new files have appeared:
+    %   - either the acquisition has crashed -> WRITE THIS CASE IN!
+    %   - or it has ended.
+    % In latter case, process remaining files
+    if new_available_avi == available_avi
+        fprintf('The number of AVI files is not increasing anymore - the recording has ended.\n');
+        n_to_process = new_available_avi - processed_avi;
+        % if remaining number is lower than the usual processing number,
+        % take remaining files and stitch them together
+        if n_to_process < n_stitch
+            count = count + 1;
+            fprintf('Will stitch the last %u remaining files together.\n',n_to_process);
+            last_avi_name = fullfile(savedir,[recname '_STITCH_' num2str(count) '.avi']);
+            last_avi = VideoWriter(last_avi_name);
+            open(last_avi)
+            for ff = 1:n_to_process
+                fprintf('Processing file %u out of %u.\n',ff,n_to_process);
+                temp_row = find(avi_index(:,2) == min(avi_index(:,2))-1 + count*n_stitch + ff);
+                temp_idx = avi_index(temp_row,1);
+                temp_avi_name = fullfile(acqdir,avifiles(temp_idx).name);
+                temp_avi = VideoReader(temp_avi_name);
+                
+                while hasFrame(temp_avi)
+                    frame = readFrame(temp_avi);
+                    %             disp(size(frame));
+                    writeVideo(last_avi,frame);
+                    clear frame
+                end
+                
+                new_csv_name = [];
+                movementTracking_byChunk_fxn(new_avi_name,count,outputdir,...
+                    anim1,anim2,new_csv_name,ROI_1,ROI_2,corners_1,corners_2);
+                
+            end
+            close(last_avi);
+            processed_avi = processed_avi + n_to_process;
+        else
+            % otherwise, proceed as usual
+            available_avi = new_available_avi;
+            % Increase the chunk counter and move on to the next chunk
+            count = count + 1;
+        end
+    else
+        % otherwise, update file counter and keep going
+        available_avi = new_available_avi;
+        % Increase the chunk counter and move on to the next chunk
+        count = count + 1;
+    end
+    
+    
+end
+
+
+fprintf('\n\n*** All done! ***\n\n');
+
+% now stitch together tracking output for each chunk
+havecsv = 0;
+stitchMovementData(anim1,outputdir,havecsv,acqdir);
+stitchMovementData(anim2,outputdir,havecsv,acqdir);
+

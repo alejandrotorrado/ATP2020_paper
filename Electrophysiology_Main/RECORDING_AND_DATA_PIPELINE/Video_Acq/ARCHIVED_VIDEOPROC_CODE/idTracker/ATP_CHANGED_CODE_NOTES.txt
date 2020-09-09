@@ -1,0 +1,9 @@
+VIDEO TRACKING WITH idTracker
+
+ATP CHANGES
+
+in "panel_identitracking_ATP"
+	line 604 in function "calculavideomedio":
+	  changed the 2nd argument of the call to function "datosegm2videomedio".
+	  This argument controls the number of frames used to estimate video background.
+	  Increased number leads to better tracking.

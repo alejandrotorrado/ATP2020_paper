@@ -1,0 +1,78 @@
+function stitchMovementData(animID,rawDir,havecsv,maindir)
+
+% STITCH MOVEMENT DATA
+%
+% This function takes the outputs from movementTracking_byChunk_fxn, which
+% are a list of AVI files with their corresponding frame times stored in
+% CSV files, and stitches all the data together into a single movement data
+% file.
+% If the CSV files are not available but the last raw CSV file contains all
+% the frame times, this function will be able to deal with that
+% automatically and construct the right output structure (this is based on
+% KH67_68, where the code was wrong).
+
+if nargin == 2
+    havecsv = 1;
+elseif nargin == 3 && havecsv == 0
+    error(sprintf('stitchMovementData::Not enough input arguments\nIf there are no csv files, must have main acquisition directory as 4th argument.\n'));
+end
+
+% create raw data dir path and error out if it does not exist
+anim_dir = fullfile(rawDir,animID);
+if ~exist(anim_dir,'dir');
+    error('stitchMovementData::dirNotFound\nCould not find raw data directory in location: %s\n',anim_dir);
+end
+
+% index files by date created
+mvt_filelist = dir([anim_dir filesep '*.mat']);
+mvt_files_bydate = [mvt_filelist(:).datenum];
+[~,mvt_idx_bydate] = sort(mvt_files_bydate);
+mvt_files = {mvt_filelist(mvt_idx_bydate).name}';
+
+% construct large outdata array from the individual ones
+DATA = struct('smooth_movement',[],'frame_times',[],'nframes',0,'mask',[]);
+RAW = struct('raw_movement',[],'track',[]);
+for cc = 1:size(mvt_files,1)
+    % get correct file and load data
+    filename = [anim_dir filesep mvt_files{cc}];
+    varname = [animID '_out'];
+    tmp = load(filename,varname);
+    
+    % update output variables:
+    %  - DATA
+    DATA.smooth_movement    = [DATA.smooth_movement; tmp.(varname).DATA.smooth_movement];
+    DATA.frame_times        = [DATA.frame_times; tmp.(varname).DATA.frame_times];
+    DATA.nframes            = DATA.nframes + tmp.(varname).DATA.nframes;
+    if cc == 1
+        DATA.mask           = tmp.(varname).DATA.mask;
+    end
+    
+    %  - RAW
+    RAW.raw_movement        = [RAW.raw_movement; tmp.(varname).RAW.raw_movement];
+    RAW.track               = [RAW.track; tmp.(varname).RAW.track];
+    
+end
+
+if isempty(DATA.frame_times) && ~havecsv
+    fprintf('Filling in frame times from single file.\n');
+    allcsv = dir([maindir filesep '*.csv']);
+    csvdates = [allcsv(:).datenum];
+    [~,csvdateidx] = sort(csvdates);
+    csvfiles = {allcsv(csvdateidx).name}'; 
+    csvlast = csvfiles{end};
+    ft = csvread(fullfile(maindir,csvlast));
+    DATA.frame_times = ft;
+    rawmvt_temp(:,1) = ft;
+    rawmvt_temp = RAW.raw_movement;
+    RAW.raw_movement = [];
+    RAW.raw_movement = rawmvt_temp;
+end
+
+outdata.DATA = DATA;
+outdata.RAW = RAW;
+
+saveout = fullfile(rawDir,[animID '_movement_full.mat']);
+
+fprintf('\nSaving data for animal %s in file: %s. Please wait...\n',animID,saveout);
+save(saveout,'outdata','-v7.3');
+fprintf('      *** Done! ***\n\n');

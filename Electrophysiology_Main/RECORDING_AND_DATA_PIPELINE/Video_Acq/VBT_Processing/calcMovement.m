@@ -1,0 +1,10 @@
+fdir = 'Z:\ATP_VideoFiles\vbt_at39';
+mydir = dir(fdir filesep 'po
+fname = 'pos_9.txt';
+d1 = dlmread([fdir filesep fname], '\t');
+d2 = reducenan(d1);
+square_root = sqrt(d2(:,3).^2 + d2(:,4).^2);
+d3 = [d2 square_root];
+POS = d3(:,end);
+MVT = abs(diff(POS)); 
+SMOOTH = smooth(MVT,20,'rloess');
