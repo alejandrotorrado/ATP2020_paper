@@ -6,7 +6,11 @@
 
 
 % load data - change path to file here if needed
-load_dir = '/Volumes/turrigiano-lab/ATP_MAIN/DATA/Dissertation_Data/ER2020/ER_Fig1';
+if ismac
+    load_dir = '/Volumes/turrigiano-lab/ATP_MAIN/DATA/Dissertation_Data/ER2020/ER_Fig1';
+elseif ispc
+    load_dir = 'Z:\ATP_MAIN\DATA\Dissertation_Data\ER2020\ER_Fig1';
+end
 loadfile = [load_dir filesep 'recov_analysis.mat'];
 rload = load(loadfile);
 recov = rload.recov_analysis;
@@ -17,13 +21,13 @@ FRbycell_RSU_CTRL = recov.CONTROL.RSU_FRbycell;
 G_bin = recov.G_bin;
 
 % Cell indexes to reproduce paper figures
-% dep: 5 and 21
-% ctrl: 9 and 21
+% dep: 5 and 31
+% ctrl: 8 and 23
 
 er_cell1 = 5;
-er_cell2 = 21;
-ctrl_cell1 = 9;
-ctrl_cell2 = 21;
+er_cell2 = 31;
+ctrl_cell1 = 8;
+ctrl_cell2 = 23;
 
 % ER cells FR
 er_fr1 = FRbycell_RSU(er_cell1,:);
@@ -105,8 +109,8 @@ plot([x0 xsize],[er_blfr1 er_blfr1],'--','color',er_col1,'linewidth',blw);
 plot(er_fr2,'-','color',er_col2,'linewidth',lw);
 plot([0 xsize],[er_blfr2 er_blfr2],'--','color',er_col2,'linewidth',blw);
 
-set(gca,'xlim',[x0 xsize],'ylim',[y0 y1],'xtick',[x0 : (24*3600)/G_bin : xsize],...
-    'xticklabel',(x0*G_bin/3600):24:264);
+set(gca,'xlim',[x0 xsize],'ylim',[y0 y1],'xtick',[x0 + 12*3600/G_bin : (24*3600)/G_bin : xsize],...
+    'xticklabel',(x0*G_bin/3600)+12:24:264);
 
 box off;
 ylabel('Firing rate (Hz)','fontsize',28);
@@ -132,8 +136,8 @@ plot([x0 xsize],[ctrl_blfr1 ctrl_blfr1],'--','color',ctrl_col1,'linewidth',blw);
 plot(ctrl_fr2,'-','color',ctrl_col2,'linewidth',lw);
 plot([0 xsize],[ctrl_blfr2 ctrl_blfr2],'--','color',ctrl_col2,'linewidth',blw);
 
-set(gca,'xlim',[x0 xsize],'ylim',[y0 y1],'xtick',[x0 : (24*3600)/G_bin : xsize],...
-    'xticklabel',(x0*G_bin/3600):24:264,'Layer','top');
+set(gca,'xlim',[x0 xsize],'ylim',[y0 y1],'xtick',[x0 + 12*3600/G_bin : (24*3600)/G_bin : xsize],...
+    'xticklabel',(x0*G_bin/3600)+12:24:264,'Layer','top');
 
 box off;
 ylabel('Firing rate (Hz)','fontsize',28);

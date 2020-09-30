@@ -59,8 +59,8 @@ meanFR_MD4 = nanmean(FRbycell_RSU(:,floor(md4_0):ceil(md4_1)),2);
 meanFR_MD4_CTRL = nanmean(FRbycell_RSU_CTRL(:,floor(md4_0):ceil(md4_1)),2);
 
 % define Early ER (ER2)
-er2_N0 = 7.5*24*3600/G_bin;
-er2_N1 = 8.0*24*3600/G_bin;
+er2_N0 = 8.0*24*3600/G_bin;
+er2_N1 = 8.5*24*3600/G_bin;
 meanFR_ER2_N = nanmean(FRbycell_RSU(:,floor(er2_N0):ceil(er2_N1)),2);
 meanFR_ER2_N_CTRL = nanmean(FRbycell_RSU_CTRL(:,floor(er2_N0):ceil(er2_N1)),2);
 

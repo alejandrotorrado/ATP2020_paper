@@ -6,7 +6,11 @@
 % on ER2 and ER3 (Fig 2D).
 
 % load data - change path to file here if needed
+if ismac
 load_dir = '/Volumes/turrigiano-lab/ATP_MAIN/DATA/Dissertation_Data/ER2020/ER_Fig2';
+elseif ispc
+    load_dir = 'Z:\ATP_MAIN\DATA\Dissertation_Data\ER2020\ER_Fig2';
+end
 loadfile = [load_dir filesep 'recov_analysis_CPP2.mat'];
 rload = load(loadfile);
 recov = rload.recov_analysis;

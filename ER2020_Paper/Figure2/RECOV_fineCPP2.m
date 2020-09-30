@@ -49,11 +49,6 @@ dep_status = {'CONTROL','DEPRIVED'};
 FRbycell_RSU = recov.DEPRIVED.RSU_FRbycell;
 FRbycell_RSU_CTRL = recov.CONTROL.RSU_FRbycell;
 
-if no_badz
-    for uu=bad_dep
-        FRbycell_RSU(uu,:) = nan(1,size(FRbycell_RSU,2));
-    end
-end
 
 
 % number of RSUs in each condition
